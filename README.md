@@ -1,35 +1,73 @@
 # InnerSphereMap
-The Inner Sphere Map is a BattleTech mod (using ModTek) adding the whole inner Sphere to the map.
 
-## Special Thanks
-This mod would not be possible without all the help i got so Special thanks to:
+A [ModTek](https://github.com/BattletechModders/ModTek) mod for [HBS BattleTech](https://harebrained-schemes.com/battletech/) that replaces the game's small campaign map with the full Inner Sphere — over 4,700 star systems across multiple eras.
 
-- Callyste, for making the icons
-- LegendKiller [CSV], for providing his vectors of the icons
-- Jalif, for making the awesome cinematic
-- mpstark, for BTML without him we wouldn't have such awesome mods
-- SaltyHotDog, for helping me gather the data on the planets
-- Xavier, for providing us with the NBT data
-- JamieWolf, for fixing ISM while i was not around!
+**Upstream repo:** [wmtorode/InnerSphereMap](https://github.com/wmtorode/InnerSphereMap)  
+**Original by:** Morphyum
+
+---
 
 ## Features
-- Over 2000 planets added.
-- All the major factions added.
-- Removed Story.
-- Raised jumping distance to fit for the map.
-- Faction Screen now shows all factions.
 
-## Tips
-- Don't freak out if loading to the main menu takes a bit longer, modloader does its thing while you jsut see a black screen.
+- **4,700+ star systems** across three historical eras (see data below).
+- All major factions represented on the map and in the Faction Screen.
+- Adjusted jump distances scaled to the full Inner Sphere map size.
+- Story mode removed (start directly in career mode).
 
-## Download
-Downloads can be found on [github](https://github.com/Morphyum/InnerSphereMap/releases).
-    
-## Install and use
-HBS Modloader:
-- Put the InnerSphereMap folder into your mods folder, usually found under: C:\Users\USERNAME\Documents\my games\BattleTech\mods
+---
 
-ModTek:
-- Put the InnerSphereMap folder into your mods folder, usually found under: ...\steamapps\common\BATTLETECH\mods
+## Data
 
-- Start a new career.
+Star system definitions live in `InnerSphereMap_data/`, organized by era:
+
+| Directory | Era | Systems |
+|---|---|---|
+| `IS3025/` | 3025 (Succession Wars) | ~4,700 |
+| `IS3040/` | 3040 (post-4th Succession War) | ~4,700 |
+| `IS3063/` | 3063 (FedCom Civil War) | ~4,700 |
+
+Each system is a `starsystemdef_*.json` file containing location, owner, tags, and shop data compatible with the BattleTech mod ecosystem.
+
+The `DocsToSystemJSON/` tool converts source spreadsheet data into these JSON definitions.
+
+---
+
+## Installation
+
+**Via ModTek (recommended):**
+
+Place the `InnerSphereMap/` folder into your BattleTech mods directory:
+
+```
+# Steam
+~/.steam/steam/steamapps/common/BATTLETECH/mods/
+
+# Windows
+C:\Users\<USERNAME>\AppData\LocalLow\Harebrained Schemes\BATTLETECH\mods\
+```
+
+Start a **new career** — existing saves are not compatible with a map change.
+
+> The first load after installation takes longer than usual while ModTek processes the additional system definitions.
+
+---
+
+## Building the data tool
+
+`DocsToSystemJSON/` is a standalone C# utility. It requires .NET and does not depend on the BattleTech game install:
+
+```bash
+dotnet build DocsToSystemJSON/
+```
+
+---
+
+## Credits
+
+- **Callyste** — faction icons
+- **LegendKiller [CSV]** — vector icon sources
+- **Jalif** — cinematic
+- **mpstark** — BTML (original mod loader)
+- **SaltyHotDog** — planet data gathering
+- **Xavier** — NBT data
+- **JamieWolf** — maintenance and fixes

@@ -7,7 +7,9 @@ Checks:
   2. No duplicate keys within a single JSON object
   3. starsystemdef_* files have required top-level fields
   4. Description.Id matches the filename stem for starsystemdef_* files
-  5. Description.Id is unique across all starsystemdef files
+  5. Description.Id is unique within each era (IS3025/IS3040/IS3063)
+  6. Position x/y within ±2500 light-years; z must be 0
+  7. ownerID must be a known faction from ModData/faction.json
 
 Exit code 0 = clean, non-zero = failures found.
 """
@@ -21,6 +23,8 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "starsystemdef": ["Description", "Position", "ownerID"],
     "heraldrydef":   ["Description"],
 }
+
+COORD_BOUND = 2500  # light-years; actual data peaks at ~2000
 
 MOD_JSON_REQUIRED = ["Name"]
 
@@ -68,8 +72,8 @@ def era_of(path: Path) -> str:
 def validate_file(
     path: Path,
     errors: list[str],
-    # id_registry[era][id_val] -> list of file paths
     id_registry: dict[str, dict[str, list[str]]],
+    valid_factions: set[str],
 ) -> None:
     try:
         text = path.read_text(encoding="utf-8-sig")
@@ -114,16 +118,41 @@ def validate_file(
     if isinstance(desc, dict):
         id_val = desc.get("Id")
         if isinstance(id_val, str) and id_val:
-            # Description.Id must match the filename stem
             stem = path.stem
             if id_val != stem:
                 errors.append(f"{path}: Description.Id '{id_val}' does not match filename stem '{stem}'")
-            # Register for within-era uniqueness check.
-            # The same system exists in each era dir (IS3025/IS3040/IS3063) by design —
-            # scope uniqueness to the era so cross-era duplicates aren't flagged.
             if prefix == "starsystemdef":
                 era = era_of(path)
                 id_registry[era][id_val].append(str(path))
+
+    if prefix == "starsystemdef":
+        check_starsystem_extras(data, str(path), valid_factions, errors)
+
+
+def load_valid_factions(root: Path) -> set[str]:
+    faction_file = root / "InnerSphereMap_data" / "ModData" / "faction.json"
+    try:
+        data = json.loads(faction_file.read_text(encoding="utf-8-sig"))
+        return {e["Name"] for e in data.get("enumerationValueList", []) if e.get("Name")}
+    except (OSError, json.JSONDecodeError, KeyError):
+        return set()
+
+
+def check_starsystem_extras(data: dict, path: str, valid_factions: set[str], errors: list[str]) -> None:
+    pos = data.get("Position")
+    if isinstance(pos, dict):
+        for axis in ("x", "y"):
+            val = pos.get(axis)
+            if isinstance(val, (int, float)) and abs(val) > COORD_BOUND:
+                errors.append(f"{path}: Position.{axis} = {val} exceeds ±{COORD_BOUND} bound")
+        z = pos.get("z")
+        if z is not None and z != 0:
+            errors.append(f"{path}: Position.z = {z} (expected 0 — BattleTech map is 2D)")
+
+    if valid_factions:
+        owner = data.get("ownerID")
+        if isinstance(owner, str) and owner and owner not in valid_factions:
+            errors.append(f"{path}: ownerID '{owner}' is not a known faction")
 
 
 def main() -> int:
@@ -131,6 +160,7 @@ def main() -> int:
     errors: list[str] = []
     total = 0
     id_registry: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    valid_factions = load_valid_factions(root)
 
     for json_file in sorted(root.rglob("*.json")):
         parts_lower = [p.lower() for p in json_file.parts]
@@ -139,7 +169,7 @@ def main() -> int:
         if any(skip in parts_lower for skip in SKIP_DIRS):
             continue
         total += 1
-        validate_file(json_file, errors, id_registry)
+        validate_file(json_file, errors, id_registry, valid_factions)
 
     for era in sorted(id_registry):
         for id_val, paths in sorted(id_registry[era].items()):
